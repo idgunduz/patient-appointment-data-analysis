@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score
 
 
-path_to_file = "/Users/zeyna/Documents/TFG/ListasDeEsperaV1/DATOS_DIGESTIVO.xlsx"
+path_to_file = "DATOS_DIGESTIVO.xlsx"
 
 
 def main():

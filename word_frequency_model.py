@@ -4,7 +4,7 @@ import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import WordPunctTokenizer
 
-path_to_file = "/Users/zeyna/Documents/TFG/DATOS_DIGESTIVO.xlsx"
+path_to_file = "DATOS_DIGESTIVO.xlsx"
 
 
 def medical_model():
@@ -144,6 +144,7 @@ def create_word_count(array, dist=1):
                 else:
                     words[word] = 1
     return list(words.keys()), list(words.values()), words
+
 
 if __name__ == "__main__":
     medical_model()

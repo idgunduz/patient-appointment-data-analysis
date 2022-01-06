@@ -7,7 +7,8 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.decomposition import PCA
 
-path_to_file = "/Users/zeyna/Documents/TFG/ListasDeEsperaV1/DATOS_DIGESTIVO.xlsx"
+path_to_file = "DATOS_DIGESTIVO.xlsx"
+
 
 def model2():
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -81,7 +82,6 @@ def model2():
     accuracy = accuracy_score(y_test.astype(int), y_pred.astype(int))
     print(accuracy)
     score(y_test.astype(int), y_pred.astype(int), y_score.astype(int))
-
 
 
 if __name__ == "__main__":

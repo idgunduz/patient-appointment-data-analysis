@@ -1,7 +1,7 @@
 import pandas as pd
 import re
 
-path_to_file = "/Users/zeyna/Documents/TFG/ListasDeEsperaV1/DATOS_DIGESTIVO.xlsx"
+path_to_file = "DATOS_DIGESTIVO.xlsx"
 
 
 def sort_two_lists_by_second(list1, list2):

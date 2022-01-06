@@ -5,7 +5,7 @@ import matplotlib as mpl
 mpl.rcParams.update(mpl.rcParamsDefault)
 from common import *
 
-path_to_file = "/Users/zeyna/Documents/TFG/ListasDeEsperaV1/DATOS_DIGESTIVO.xlsx"
+path_to_file = "DATOS_DIGESTIVO.xlsx"
 
 
 def main_exploratory():

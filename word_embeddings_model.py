@@ -4,7 +4,7 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 from sklearn.decomposition import PCA
 
-path_to_file = "/Users/zeyna/Documents/TFG/ListasDeEsperaV1/DATOS_DIGESTIVO.xlsx"
+path_to_file = "DATOS_DIGESTIVO.xlsx"
 
 
 def medical_model():
