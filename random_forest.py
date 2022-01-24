@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score
+from sklearn import metrics
 
 
 path_to_file = "DATOS_DIGESTIVO.xlsx"
@@ -92,7 +92,8 @@ def main():
     classifier = RandomForestClassifier(n_estimators=100)
     classifier.fit(x_train.astype(int), y_train.astype(int))
     y_pred = classifier.predict(x_test)
-    print("Accuracy:", accuracy_score(y_test.astype(int), y_pred.astype(int)))
+    print("Accuracy:", metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
+    print("Accuracy:", metrics.accuracy_score(y_test.astype(int), y_pred.astype(int)))
     feature_importances_df = pd.DataFrame(
         {"feature": list(x.columns), "importance": classifier.feature_importances_}).sort_values("importance", ascending=False)
     sns.barplot(x=feature_importances_df.feature, y=feature_importances_df.importance)
