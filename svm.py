@@ -1,17 +1,10 @@
-import matplotlib.pyplot as plt
-import concurrent.futures
-import seaborn as sns
 import matplotlib as mpl
-import numpy as np
 
+from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier
-
-import common
 from common import *
-from sklearn.ensemble import RandomForestClassifier
 from sklearn import metrics
 mpl.rcParams.update(mpl.rcParamsDefault)
 
@@ -19,7 +12,7 @@ mpl.rcParams.update(mpl.rcParamsDefault)
 path_to_actividad = "DATOS-ACTIVIDAD.xlsx"
 
 
-def random_forest(df):
+def svm(df):
     target = df["REALIZADA"]
     df = df.drop(["REALIZADA"], axis=1)
 
@@ -28,30 +21,10 @@ def random_forest(df):
     x_scaled = scaler.fit_transform(x)
     label_encoder = LabelEncoder()
     y = label_encoder.fit_transform(y)
-    x_train, x_test, y_train, y_test = train_test_split(x_scaled, y, stratify=y, test_size=0.2, random_state=1)
-    classifier = RandomForestClassifier()
-    classifier.fit(x_train, y_train)
-    y_pred = classifier.predict(x_test)
-    print("Accuracy:", metrics.classification_report(y_test, y_pred))
-    print("Accuracy:", metrics.accuracy_score(y_test, y_pred))
-    TP, FN, FP, TN = confusion_matrix(y_test, y_pred, labels=[1, 0]).reshape(-1)
-    specificity = TN / (TN + FP)
-    sensitivity = TP / (TP + FN)
-    print(f'Specificidad: {specificity}')
-    print(f'Sensibilidad: {sensitivity}')
-
-
-def decision_tree(df):
-    target = df["REALIZADA"]
-    df = df.drop(["REALIZADA"], axis=1)
-
-    x, y = df.values, target.values
-    label_encoder = LabelEncoder()
-    y = label_encoder.fit_transform(y)
-    x_train, x_test, y_train, y_test = train_test_split(x, y, stratify=y, test_size=0.2, random_state=1)
-    classifier = DecisionTreeClassifier()
-    classifier.fit(x_train, y_train)
-    y_pred = classifier.predict(x_test)
+    x_train, x_test, y_train, y_test = train_test_split(x_scaled, y, stratify=y, test_size=0.3, random_state=1)
+    svc_model = SVC()
+    svc_model.fit(x_train, y_train)
+    y_pred = svc_model.predict(x_test)
     print("Accuracy:", metrics.classification_report(y_test, y_pred))
     print("Accuracy:", metrics.accuracy_score(y_test, y_pred))
     TP, FN, FP, TN = confusion_matrix(y_test, y_pred, labels=[1, 0]).reshape(-1)
@@ -105,5 +78,4 @@ def preprocessing():
 
 if __name__ == '__main__':
     dataframe = preprocessing()
-    random_forest(dataframe)
-    decision_tree(dataframe)
+    svm(dataframe)
