@@ -1,5 +1,7 @@
 import fasttext as ft
 import pandas as pd
+from sklearn import metrics
+from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 import numpy as np
 from sklearn.decomposition import PCA
@@ -84,7 +86,7 @@ def medical_model():
     salidas10 = salidas_medical.loc[salidas_medical["TIPSAL"] == 10]
     salidas_faltas = [salidas5, salidas6, salidas7, salidas10]
     salidas_faltas = pd.concat(salidas_faltas)
-    salidas_faltas["TIPSAL"] = 5
+    salidas_faltas["TIPSAL"] = 0
     salidas_medical = pd.concat([salidas1, salidas_faltas])
 
     y = salidas_medical["TIPSAL"]
@@ -97,9 +99,13 @@ def medical_model():
     y_score = clf2.predict_proba(x_test)
     y_pred = clf2.predict(x_test)
     print("Embedding model")
-    accuracy = accuracy_score(y_test, y_pred)
-    score(y_test, y_pred, y_score)
-    print(accuracy)
+    print("Accuracy:", metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
+    print("Accuracy:", metrics.accuracy_score(y_test.astype(int), y_pred.astype(int)))
+    TP, FN, FP, TN = confusion_matrix(y_test.astype(int), y_pred.astype(int), labels=[1, 0]).reshape(-1)
+    specificity = TN / (TN + FP)
+    sensitivity = TP / (TP + FN)
+    print(f'Specificidad: {specificity}')
+    print(f'Sensibilidad: {sensitivity}')
 
 
 if __name__ == "__main__":

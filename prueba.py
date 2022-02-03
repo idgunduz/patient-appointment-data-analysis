@@ -4,6 +4,7 @@ import concurrent.futures
 import matplotlib.pyplot as plt
 
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn import metrics
@@ -88,6 +89,11 @@ def main():
     y_pred = classifier.predict(x_test)
     print("Accuracy:", metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
     print("Accuracy:", metrics.accuracy_score(y_test.astype(int), y_pred.astype(int)))
+    TP, FN, FP, TN = confusion_matrix(y_test.astype(int), y_pred.astype(int), labels=[1, 0]).reshape(-1)
+    specificity = TN / (TN + FP)
+    sensitivity = TP / (TP + FN)
+    print(f'Specificidad: {specificity}')
+    print(f'Sensibilidad: {sensitivity}')
     feature_importances_df = pd.DataFrame(
         {"feature": list(x.columns), "importance": classifier.feature_importances_}).sort_values("importance", ascending=False)
     sns.barplot(x=feature_importances_df.feature, y=feature_importances_df.importance)
