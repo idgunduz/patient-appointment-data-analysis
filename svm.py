@@ -1,6 +1,8 @@
 import matplotlib as mpl
+import numpy as np
 
 from datetime import datetime
+from imblearn.over_sampling import RandomOverSampler
 from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import LabelEncoder, StandardScaler
@@ -10,19 +12,20 @@ from sklearn import metrics
 mpl.rcParams.update(mpl.rcParamsDefault)
 
 
-path_to_actividad = "DATOS-ACTIVIDAD.xlsx"
+path_to_actividad = "datos_falsos/DATOS-ACTIVIDAD.xlsx"
 
 
 def svm(df):
-    target = df["REALIZADA"]
-    df = df.drop(["REALIZADA"], axis=1)
+    target = df["TIPSAL"]
+    df = df.drop(["TIPSAL"], axis=1)
 
     x, y = df.values, target.values
     scaler = StandardScaler()
     x_scaled = scaler.fit_transform(x)
-    label_encoder = LabelEncoder()
-    y = label_encoder.fit_transform(y)
-    x_train, x_test, y_train, y_test = train_test_split(x_scaled, y, stratify=y, test_size=0.3, random_state=1)
+    oversample = RandomOverSampler(sampling_strategy='minority')
+    x_over, y_over = oversample.fit_resample(x_scaled, y)
+
+    x_train, x_test, y_train, y_test = train_test_split(x_over, y_over, stratify=y_over, test_size=0.3, random_state=1)
     svc_model = SVC()
     svc_model.fit(x_train, y_train)
     y_pred = svc_model.predict(x_test)
@@ -78,25 +81,16 @@ def preprocessing():
         count = count + 1
         #if count == 5000:
         #    break
-
-    df = df.dropna(subset=["CODIGO"])
-    df = df.dropna(subset=["SERVICIO"])
-    #df = df.dropna(subset=["PREST"])
-    df = df.dropna(subset=["ESTADO"])
-    #df = df.dropna(subset=["DEMORA"])
-    df = df.dropna(subset=["TVISITA"])
-    df = df.dropna(subset=["PROCEDENCIA"])
-    df = df.dropna(subset=["TURNO"])
-    df = df.dropna(subset=["DELTA_DIAS"])
-    df = df.dropna(subset=["REALIZADA"])
-
+    df = pd.DataFrame.drop(df, columns=["NHC"])
+    df.replace([np.inf, -np.inf], np.nan)
+    df = df.dropna()
     df = pd.get_dummies(df, columns=columns_to_expand)
-    df = pd.DataFrame.drop(df, columns=["CODIGO"])
-    df = pd.DataFrame.drop(df, columns=["ESTADO"])
 
     return df
 
 
 if __name__ == '__main__':
-    dataframe = preprocessing()
+    #dataframe = preprocessing()
+    path_to_excel = r'/Users/zeyna/Documents/TFG/dataframes/df_decision_trees_5.xlsx'
+    dataframe = pd.read_excel(path_to_excel)
     svm(dataframe)

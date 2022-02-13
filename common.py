@@ -1,6 +1,7 @@
 import pandas as pd
 import re
 
+from sklearn.impute import SimpleImputer
 path_to_file = "DATOS_DIGESTIVO.xlsx"
 
 
@@ -16,6 +17,61 @@ def sort_two_lists_by_second(list1, list2):
 
     list2_sorted, list1_sorted = list(zip(*sorted(zip(list2, list1), key=get_key, reverse=True)))
     return list1_sorted, list2_sorted
+
+
+def preprocess():
+    import concurrent.futures
+    import numpy as np
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        f1 = executor.submit(pd.read_excel, path_to_file, sheet_name="SALIDAS")
+        f2 = executor.submit(pd.read_excel, path_to_file, sheet_name="ACTIVIDAD")
+        salidas = f1.result()
+        actividad = f2.result()
+
+    salidas = salidas.loc[salidas.COD_PRESTA == "CPRIMERA"]
+    salidas = salidas.reset_index(drop=True)
+    actividad = actividad.drop_duplicates('NHC')
+    df = salidas
+    df.loc[salidas["TIPENTR"] == 1, "TIPENTR"] = 0
+    df.loc[salidas["TIPENTR"] != 0, "TIPENTR"] = 1
+    df.loc[salidas["ULTESP"] == 1, "ULTESP"] = 0
+    df.loc[salidas["ULTESP"] != 0, "ULTESP"] = 1
+    salidas1 = salidas.loc[salidas["TIPSAL"] == 1]
+    salidas_faltas = salidas.loc[salidas["TIPSAL"] != 1]
+    salidas_faltas["TIPSAL"] = 0
+    df = pd.concat([salidas1, salidas_faltas])
+    labels_to_drop = ["NUMICU", "CIPA", "SERVIC_AUT", "SERVIC", "SERV_LOCAL", "TIPPRES", "CIRPRES", "FI", "FV",
+                      "FH", "FH_AGENDA", "FS", "AGENDA", "FC", "FG", "COD_PRESTA", "PRESTA_LOCAL"]
+    df = pd.DataFrame.drop(df, columns=labels_to_drop)
+    df["SEXO"] = ""
+    df["EDAD"] = ""
+    for idx_salidas, cipa_salidas in enumerate(salidas["CIPA"]):
+        for idx_actividad, cipa_actividad in enumerate(actividad["CIPA"]):
+            if cipa_salidas == cipa_actividad:
+                if actividad.iloc[idx_actividad]["SEXO"] == "V":
+                    df.loc[idx_salidas]["SEXO"] = 0
+                if actividad.iloc[idx_actividad]["SEXO"] == "M":
+                    df.loc[idx_salidas]["SEXO"] = 1
+                df.loc[idx_salidas]["EDAD"] = (salidas.iloc[idx_salidas]["FC"] -
+                                               actividad.iloc[idx_actividad]["FECHANAC"]) \
+                                                  .total_seconds() / (60 * 60 * 24 * 365)
+
+    df.replace([np.inf, -np.inf], np.nan)
+    df = df.dropna(subset=["EDAD"])
+    df = df.dropna(subset=["NHC"])
+    df = df.dropna(subset=["TIPENTR"])
+    df = df.dropna(subset=["DELTA_DIAS"])
+    df = df.dropna(subset=["ULTESP"])
+    df = df.dropna(subset=["TIPSAL"])
+    median_imputer = SimpleImputer(missing_values=np.nan, strategy='median')
+    median_imputer = median_imputer.fit(df)
+    imputed_df = median_imputer.transform(df.values)
+    df = pd.DataFrame(data=imputed_df, columns=df.columns)
+    #df = pd.get_dummies(df, columns=columns_to_convert_to_numeric_value)
+    # TODO: Delete columns that have low ocurrences
+
+    return df
 
 
 def load_and_preprocess(con_sexo=True, con_edad=True, con_distancia=True, sin_desconocidos=False,
@@ -35,8 +91,9 @@ def load_and_preprocess(con_sexo=True, con_edad=True, con_distancia=True, sin_de
         salidas = f1.result()
         actividad = f2.result()
 
-    labels_to_drop = ["NUMICU", "CIPA", "SERVIC_AUT", "SERVIC", "SERV_LOCAL", "TIPPRES", "CIRPRES", "FI", "FV", "SEXO",
-                      "FH", "FH_AGENDA", "FS", "AGENDA", "FC", "FG", "FNAC", "COD_PRESTA", "MES_CITA", "PRESTA_LOCAL", "DIA_SEMANA", "SEMANA_MES"]
+    labels_to_drop = ["NUMICU", "CIPA", "SERVIC_AUT", "SERVIC", "SERV_LOCAL", "TIPPRES", "CIRPRES", "FI", "FV",
+                      "FH", "FH_AGENDA", "FS", "AGENDA", "FC", "FG", "FNAC", "COD_PRESTA", "MES_CITA", "PRESTA_LOCAL",
+                      "DIA_SEMANA", "SEMANA_MES"]
 
     if sin_NHC:
         labels_to_drop.append("NHC")
@@ -52,10 +109,10 @@ def load_and_preprocess(con_sexo=True, con_edad=True, con_distancia=True, sin_de
         salidas["FNAC"] = salidas["FC"]
         fnac_index_salidas = salidas.columns.get_loc("FNAC")
         fnac_index_actividad = actividad.columns.get_loc("FECHANAC")
-    if con_distancia:
+    """if con_distancia:
         salidas["DIST"] = 0
         cod_post_index_salidas = salidas.columns.get_loc("DIST")
-        cod_post_index_actividad = actividad.columns.get_loc("CODPOST")
+        cod_post_index_actividad = actividad.columns.get_loc("CODPOST")"""
 
     if con_edad | con_sexo | con_distancia:
         for idx_salidas, cipa_salidas in enumerate(salidas["CIPA"]):
@@ -67,7 +124,7 @@ def load_and_preprocess(con_sexo=True, con_edad=True, con_distancia=True, sin_de
                     if con_edad:
                         salidas.iloc[idx_salidas, fnac_index_salidas] = actividad.iloc[idx_actividad,
                                                                                        fnac_index_actividad]
-                    if con_distancia:
+                    """if con_distancia:
                         cod_paciente = actividad.iloc[idx_actividad, cod_post_index_actividad]
                         if cod_paciente:
                             if not pd.isna(cod_paciente):
@@ -79,7 +136,7 @@ def load_and_preprocess(con_sexo=True, con_edad=True, con_distancia=True, sin_de
                                     dist = np.float32(cod_dict[cod_paciente])
                                 if (dist is np.nan) | (dist is np.inf) | (dist is -np.inf):
                                     dist = 0
-                                salidas.iloc[idx_salidas, cod_post_index_salidas] = int(dist)
+                                salidas.iloc[idx_salidas, cod_post_index_salidas] = int(dist)"""
 
                     break
 
@@ -107,7 +164,6 @@ def load_and_preprocess(con_sexo=True, con_edad=True, con_distancia=True, sin_de
     if agrupar_ausencias:
         salidas_faltas["TIPSAL"] = 5
     salidas = pd.concat([salidas1, salidas_faltas])
-
     # TODO: Delete columns that have low ocurrences
 
     return salidas
@@ -127,6 +183,7 @@ def get_week_of_month(s):
     first_week_of_month = get_week(first_day_of_month)
     current_week = get_week(s)
     return current_week - first_week_of_month
+
 
 def get_words(content):
     """

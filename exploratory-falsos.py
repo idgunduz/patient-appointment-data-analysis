@@ -5,7 +5,7 @@ import matplotlib as mpl
 mpl.rcParams.update(mpl.rcParamsDefault)
 from common import *
 from datetime import datetime
-path_to_actividad = "DATOS-ACTIVIDAD.xlsx"
+path_to_actividad = "datos_falsos/DATOS-ACTIVIDAD.xlsx"
 
 
 def main_exploratory():
