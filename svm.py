@@ -2,7 +2,7 @@ import matplotlib as mpl
 import numpy as np
 
 from datetime import datetime
-from imblearn.over_sampling import RandomOverSampler
+from imblearn.under_sampling import NearMiss
 from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import LabelEncoder, StandardScaler
@@ -22,10 +22,9 @@ def svm(df):
     x, y = df.values, target.values
     scaler = StandardScaler()
     x_scaled = scaler.fit_transform(x)
-    oversample = RandomOverSampler(sampling_strategy='minority')
-    x_over, y_over = oversample.fit_resample(x_scaled, y)
-
-    x_train, x_test, y_train, y_test = train_test_split(x_over, y_over, stratify=y_over, test_size=0.3, random_state=1)
+    undersample = NearMiss(version=2, n_neighbors=3)
+    x_under, y_under = undersample.fit_resample(x_scaled, y)
+    x_train, x_test, y_train, y_test = train_test_split(x_under, y_under, stratify=y_under, test_size=0.3, random_state=1)
     svc_model = SVC()
     svc_model.fit(x_train, y_train)
     y_pred = svc_model.predict(x_test)
@@ -91,6 +90,6 @@ def preprocessing():
 
 if __name__ == '__main__':
     #dataframe = preprocessing()
-    path_to_excel = r'/Users/zeyna/Documents/TFG/dataframes/df_decision_trees_5.xlsx'
+    path_to_excel = r'/Users/zeyna/Documents/TFG/dataframes/df_decision_trees_7.xlsx'
     dataframe = pd.read_excel(path_to_excel)
     svm(dataframe)

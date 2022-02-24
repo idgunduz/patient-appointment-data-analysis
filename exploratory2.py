@@ -8,11 +8,27 @@ from common import *
 path_to_excel = r'/Users/zeyna/Documents/TFG/dataframes/df_decision_trees.xlsx'
 
 
-def main_exploratory(columns_count, df):
+def without_hue(plot, feature):
+    total = len(feature)
+    for p in plot.patches:
+        percentage = '{:.1f}%'.format(100 * p.get_height()/total)
+        x = p.get_x() + p.get_width() / 2 - 0.05
+        y = p.get_y() + p.get_height()
+        plot.annotate(percentage, (x, y), size=12)
+    plt.show()
 
+
+def main_exploratory(columns_count, df):
     for cc in columns_count:
+        plt.figure(figsize=(10, 6))
         sns.countplot(x=cc, hue="TIPSAL", data=df).set(title=cc, ylabel='Total Pacientes')
         plt.show()
+    """for cc in columns_count:
+        fig, ax = sns.countplot(x=cc, hue="TIPSAL", data=df).set(title=cc, ylabel='Total Pacientes')
+        for s in ax:
+            without_hue(s, df[cc])
+        plt.show()"""
+
     """sns.countplot(x="TIPPRES", hue="TIPSAL", data=df).set(title='TIPPRES', ylabel='Total Pacientes')
     plt.show()
 
