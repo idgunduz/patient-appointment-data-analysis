@@ -1,11 +1,10 @@
-import imblearn
 import numpy as np
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 from sklearn.metrics import confusion_matrix
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from imblearn.under_sampling import NearMiss
 from common import *
@@ -18,15 +17,6 @@ mpl.rcParams.update(mpl.rcParamsDefault)
 def neural_networks(df):
     target = df["TIPSAL"]
     df = df.drop(["TIPSAL"], axis=1)
-    """median_imputer = SimpleImputer(missing_values=np.nan, strategy='median')
-    median_imputer = median_imputer.fit(df)
-    imputed_df = median_imputer.transform(df.values)
-    df = pd.DataFrame(data=imputed_df, columns=df.columns)"""
-    """x, y = df.values, target.values
-    scaler = StandardScaler()
-    x_scaled = scaler.fit_transform(x)"""
-    """label_encoder = LabelEncoder()
-    y = label_encoder.fit_transform(y)"""
 
     x, y = df.values, target.values
     scaler = StandardScaler()
@@ -39,7 +29,6 @@ def neural_networks(df):
     model.add(Dense(512, activation='relu'))
     model.add(Dense(1, activation='sigmoid'))
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    #model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     model.summary()
     hist = model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=10, batch_size=100)
     sns.set()
