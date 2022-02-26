@@ -12,8 +12,6 @@ from common import *
 from keras.models import Sequential
 from keras.layers import Dense
 from sklearn import metrics
-from datetime import datetime
-from sklearn.impute import SimpleImputer
 mpl.rcParams.update(mpl.rcParamsDefault)
 
 
