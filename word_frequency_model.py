@@ -1,10 +1,7 @@
 import pandas as pd
-import matplotlib.pyplot as plt
-import nltk
-from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import WordPunctTokenizer
 
-path_to_file = "DATOS_DIGESTIVO.xlsx"
+
+path_to_file = "datos/DATOS_DIGESTIVO.xlsx"
 
 
 def medical_model():

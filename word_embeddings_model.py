@@ -9,7 +9,9 @@ from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
 from sklearn import metrics
-path_to_file = "DATOS_DIGESTIVO.xlsx"
+
+
+path_to_file = "datos/DATOS_DIGESTIVO.xlsx"
 
 
 def medical_model():

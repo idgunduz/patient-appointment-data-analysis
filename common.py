@@ -2,7 +2,9 @@ import pandas as pd
 import re
 
 from sklearn.impute import SimpleImputer
-path_to_file = "DATOS_DIGESTIVO.xlsx"
+
+
+path_to_file = "datos/DATOS_DIGESTIVO.xlsx"
 
 
 def sort_two_lists_by_second(list1, list2):

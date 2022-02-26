@@ -298,7 +298,7 @@ if __name__ == '__main__':
     #dataframe = iterate_data_files()
     #dataframe.to_excel(r'/Users/zeyna/Documents/TFG/dfs/df1.xlsx', index=False)
     #iterate_data_files()
-    path_to_excel = r'/Users/zeyna/Documents/TFG/dfs/df_to_explore.xlsx'
+    path_to_excel = r'dfs/df_to_explore.xlsx'
     dataframe = pd.read_excel(path_to_excel)
     columns_count = ["ANTERIOR", "TVISITA", "LIBRELEC", "TURNO", "CIRPRES", "ULTESP", "TIPENTR",
                      "SERVICIO", "GR_ETARIO", "SEXO", "RANGOEDAD"]

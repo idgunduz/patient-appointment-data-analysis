@@ -1,101 +1,59 @@
-import pandas as pd
 import seaborn as sns
-import concurrent.futures
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+import concurrent.futures
+import numpy as np
 
-from sklearn.ensemble import RandomForestClassifier
+from imblearn.under_sampling import NearMiss
+from sklearn.metrics import confusion_matrix
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.tree import DecisionTreeClassifier
+from common import *
+from sklearn.ensemble import RandomForestClassifier
 from sklearn import metrics
+mpl.rcParams.update(mpl.rcParamsDefault)
 
 
-path_to_file = "DATOS_DIGESTIVO.xlsx"
+path_to_actividad = 'datos/ACTIVIDAD.xlsx'
+path_to_salidas = "datos/SALIDAS.xlsx"
+path_to_scae = "datos/SCAE.xlsx"
+path_to_codigos = "datos/CODIGOS-ACTIVIDAD.xlsx"
+path_to_datos_actividad = "datos/DATOS-ACTIVIDAD.xlsx"
 
 
-def main():
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        f1 = executor.submit(pd.read_excel, path_to_file, sheet_name="SCAE")
-        f2 = executor.submit(pd.read_excel, path_to_file, sheet_name="ACTIVIDAD")
-        f3 = executor.submit(pd.read_excel, path_to_file, sheet_name="SALIDAS")
-        scae = f1.result()
-        actividad = f2.result()
-        salidas = f3.result()
+def random_forest(df):
+    target = df["TIPSAL"]
+    df = df.drop(["TIPSAL"], axis=1)
+    """median_imputer = SimpleImputer(missing_values=np.nan, strategy='median')
+    median_imputer = median_imputer.fit(df)
+    imputed_df = median_imputer.transform(df.values)
+    df = pd.DataFrame(data=imputed_df, columns=df.columns)"""
+    """x, y = df.values, target.values
+    scaler = StandardScaler()
+    x_scaled = scaler.fit_transform(x)"""
+    """label_encoder = LabelEncoder()
+    y = label_encoder.fit_transform(y)"""
 
-    actividad = actividad.drop_duplicates('NHC')
-    scae = scae.drop_duplicates('NHC')
-
-    """ Se ha borrado el nombre del campo PROCEDENCIA, ULTESP y "SOSPECHA """
-    df = pd.DataFrame(index = range(len(salidas)), columns = ["NHC", "SEXO", "PREFERENTE", "CIRPRES",
-                                                              "EDAD", "DELTA_DIAS", "TIPENTR", "ULTESP", "TIPSAL"])
-
-    for idx_salidas, cipa_salidas in enumerate(salidas["CIPA"]):
-        for idx_actividad, cipa_actividad in enumerate(actividad["CIPA"]):
-            if cipa_salidas == cipa_actividad:
-                df.loc[idx_salidas]["NHC"] = salidas.iloc[idx_salidas]["NHC"]
-                """ df.loc[idx_salidas]["PROCEDENCIA"] = actividad.iloc[idx_actividad]["PROCEDENCIA"] """
-                if actividad.iloc[idx_actividad]["SEXO"] == 'M':
-                    df.loc[idx_salidas]["SEXO"] = 0
-                else:
-                    df.loc[idx_salidas]["SEXO"] = 1
-
-                if salidas.iloc[idx_salidas]["TIPSAL"] == 1 or salidas.iloc[idx_salidas]["TIPSAL"] == 2 \
-                        or salidas.iloc[idx_salidas]["TIPSAL"] == 3 or salidas.iloc[idx_salidas]["TIPSAL"] == 12 \
-                        or salidas.iloc[idx_salidas]["TIPSAL"] == 16 or salidas.iloc[idx_salidas]["TIPSAL"] == 17:
-                    df.loc[idx_salidas]["TIPSAL"] = 1
-                if salidas.iloc[idx_salidas]["TIPSAL"] == 4 or salidas.iloc[idx_salidas]["TIPSAL"] == 5 \
-                        or salidas.iloc[idx_salidas]["TIPSAL"] == 6 or salidas.iloc[idx_salidas]["TIPSAL"] == 15:
-                    df.loc[idx_salidas]["TIPSAL"] = 0
-
-                df.loc[idx_salidas]["CIRPRES"] = salidas.iloc[idx_salidas]["CIRPRES"]
-                df.loc[idx_salidas]["DELTA_DIAS"] = (salidas.iloc[idx_salidas]["FC"] - salidas.iloc[idx_salidas]["FG"]).total_seconds() / (60 * 60 * 24)
-                #df.loc[salidas["ULTESP"] == 1, "ULTESP"] = 0
-                #df.loc[salidas["ULTESP"] != 0, "ULTESP"] = 1
-                df.loc[idx_salidas]["TIPENTR"] = salidas.iloc[idx_salidas]["TIPENTR"]
-                df.loc[idx_salidas]["ULTESP"] = salidas.iloc[idx_salidas]["ULTESP"]
-
-
-    """ df = df.dropna(subset=['PROCEDENCIA']) """
-    df = df.dropna(subset=['SEXO'])
-    df = df.dropna(subset=['TIPSAL'])
-    df = df.dropna(subset=['DELTA_DIAS'])
-    df = df.dropna(subset=['ULTESP'])
-    df = df.dropna(subset=['TIPENTR'])
-    df = df.reset_index(drop=True)
-
-    for idx_df, nhc_df in enumerate(df["NHC"]):
-        for idx_scae, nhc_scae in enumerate(scae["NHC"]):
-            if nhc_df == (nhc_scae.upper()):
-                #if scae.iloc[idx_scae]["Sospecha Malignidad"] == "NO":
-                #    df.loc[idx_df]["SOSPECHA"] = 0
-                #else:
-                #    df.loc[idx_df]["SOSPECHA"] = 1
-                if scae.iloc[idx_scae]["Preferente"] == "NO":
-                    df.loc[idx_df]["PREFERENTE"] = 0
-                else:
-                    df.loc[idx_df]["PREFERENTE"] = 1
-
-                df.loc[idx_df]["EDAD"] = (scae.iloc[idx_scae]["Fecha Cita"] - scae.iloc[idx_scae]["Fecha de Nacimiento"]).total_seconds() / (60 * 60 * 24 * 365)
-
-    #df = df.dropna(subset=['SOSPECHA'])
-    df = df.dropna(subset=['PREFERENTE'])
-    df = df.dropna(subset=['EDAD'])
-    df = df.reset_index(drop=True)
-
-    df = pd.DataFrame.drop(df, columns=["NHC"])
-
-    y = df["TIPSAL"]
-    x = pd.DataFrame.drop(df, columns=["TIPSAL"])
+    x, y = df.values, target.values
     scaler = StandardScaler()
     x_scaled = scaler.fit_transform(x)
-
-    x_train, x_test, y_train, y_test = train_test_split(x_scaled, y, stratify=y, test_size=0.10, random_state=42)
-    classifier = RandomForestClassifier(n_estimators=100)
+    undersample = NearMiss(version=2, n_neighbors=3)
+    x_under, y_under = undersample.fit_resample(x_scaled, y)
+    x_train, x_test, y_train, y_test = train_test_split(x_under, y_under, stratify=y_under, test_size=0.2, random_state=7)
+    classifier = RandomForestClassifier()
     classifier.fit(x_train.astype(int), y_train.astype(int))
-    y_pred = classifier.predict(x_test)
+    y_pred = classifier.predict(x_test.astype(int))
     print("Accuracy:", metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
     print("Accuracy:", metrics.accuracy_score(y_test.astype(int), y_pred.astype(int)))
+    TP, FN, FP, TN = confusion_matrix(y_test.astype(int), y_pred.astype(int), labels=[1, 0]).reshape(-1)
+    specificity = TN / (TN + FP)
+    sensitivity = TP / (TP + FN)
+    print(f'Specificidad: {specificity}')
+    print(f'Sensibilidad: {sensitivity}')
     feature_importances_df = pd.DataFrame(
-        {"feature": list(x.columns), "importance": classifier.feature_importances_}).sort_values("importance", ascending=False)
+        {"feature": list(df.columns), "importance": classifier.feature_importances_}).sort_values("importance",
+                                                                                                 ascending=False)
     sns.barplot(x=feature_importances_df.feature, y=feature_importances_df.importance)
     plt.xlabel("Feature Importance Score")
     plt.ylabel("Features")
@@ -104,5 +62,305 @@ def main():
     plt.show()
 
 
-if __name__ == "__main__":
-    main()
+def decision_tree(df):
+    target = df["TIPSAL"]
+    df = df.drop(["TIPSAL"], axis=1)
+    """median_imputer = SimpleImputer(missing_values=np.nan, strategy='median')
+    median_imputer = median_imputer.fit(df)
+    imputed_df = median_imputer.transform(df.values)
+    df = pd.DataFrame(data=imputed_df, columns=df.columns)"""
+
+    """label_encoder = LabelEncoder()
+    y = label_encoder.fit_transform(y)"""
+    x, y = df.values, target.values
+    scaler = StandardScaler()
+    x_scaled = scaler.fit_transform(x)
+    undersample = NearMiss(version=2, n_neighbors=3)
+    x_under, y_under = undersample.fit_resample(x_scaled, y)
+    x_train, x_test, y_train, y_test = train_test_split(x_under, y_under, stratify=y_under, test_size=0.2, random_state=7)
+    classifier = DecisionTreeClassifier()
+    classifier.fit(x_train.astype(int), y_train.astype(int))
+    y_pred = classifier.predict(x_test.astype(int))
+    print("Accuracy:", metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
+    print("Accuracy:", metrics.accuracy_score(y_test.astype(int), y_pred.astype(int)))
+    TP, FN, FP, TN = confusion_matrix(y_test.astype(int), y_pred.astype(int), labels=[1, 0]).reshape(-1)
+    specificity = TN / (TN + FP)
+    sensitivity = TP / (TP + FN)
+    print(f'Specificidad: {specificity}')
+    print(f'Sensibilidad: {sensitivity}')
+
+
+def preprocessing():
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        f1 = executor.submit(pd.read_excel, path_to_salidas)
+        f2 = executor.submit(pd.read_excel, path_to_actividad)
+        #f3 = executor.submit(pd.read_excel, path_to_scae)
+        #f4 = executor.submit(pd.read_excel, path_to_codigos)
+        #f5 = executor.submit(pd.read_excel, path_to_datos_actividad)
+        salidas = f1.result()
+        actividad = f2.result()
+        #scae = f3.result()
+        #codigos_actividad = f4.result()
+        #datos_actividad = f5.result()
+
+    #actividad_con_nhc = pd.concat([datos_actividad, codigos_actividad], axis=1)
+    #actividad_con_nhc.to_excel(r'datos/ACTIVIDAD.xlsx', index=False)
+    #actividad = pd.read_excel(path_to_actividad, sheet_name='ACTIVIDAD')
+
+    """df = pd.DataFrame(index=range(len(salidas)), columns=["NHC", "DELTA_DIAS", "ANTERIOR", "TVISITA", "LIBRELEC",
+                                                          "SERVICIO", "TURNO", "CIRPRES", "ULTESP", "TIPENTR",
+                                                          "GR_ETARIO", "TIPSAL"])"""
+    df = pd.DataFrame(index=range(len(salidas)), columns=["NHC", "DELTA_DIAS", "ANTERIOR", "TVISITA", "LIBRELEC",
+                                                          "TURNO", "CIRPRES", "ULTESP", "TIPENTR", "SERVICIO",
+                                                          "TIPSAL", "GR_ETARIO"])
+    """df = pd.DataFrame(index=range(len(salidas)), columns=["NHC", "DELTA_DIAS", "ANTERIOR", "TVISITA", 
+                                                             "LIBRELEC", "SERVICIO", "TURNO", "CIRPRES", 
+                                                             "ULTESP", "TIPENTR", "GR_ETARIO", "TIPSAL",
+                                                             "PREST", "PREFERENTE"])"""
+
+    columns_to_expand = ["TVISITA", "ANTERIOR", "SERVICIO", "TURNO", "GR_ETARIO"]
+    #columns_to_expand = ["TVISITA", "ANTERIOR", "SERVICIO", "TURNO"]
+    #columns_to_expand = ["TVISITA", "ANTERIOR", "SERVICIO", "TURNO", "GR_ETARIO", "PREST", "PREFERENTE"]
+    salidas = salidas.drop_duplicates('NHC_ENCRIPTADO')
+    actividad = actividad.drop_duplicates('NHC_ENCRIPTADO')
+    #scae = scae.drop_duplicates('NHC_ENCRIPTADO')
+
+    for idx_actividad, nhc_actividad in enumerate(actividad["NHC_ENCRIPTADO"]):
+        for idx_salidas, nhc_salidas in enumerate(salidas["NHC_ENCRIPTADO"]):
+            if nhc_actividad == nhc_salidas:
+                df.loc[idx_salidas]["NHC"] = nhc_salidas
+                df.loc[idx_salidas]["SERVICIO"] = actividad.iloc[idx_actividad]["SERVICIO"]
+                df.loc[idx_salidas]["TVISITA"] = actividad.iloc[idx_actividad]["TVISITA"]
+                #df.loc[idx_actividad]["PREST"] = actividad.iloc[idx_actividad]["PREST"]
+                #df.loc[idx_actividad]["DEMORA"] = actividad.iloc[idx_actividad]["DEMORA"]
+                #df.loc[idx_actividad]["PROCEDENCIA"] = actividad.iloc[idx_actividad]["PROCEDENCIA"]
+                df.loc[idx_salidas]["DELTA_DIAS"] = (actividad.iloc[idx_actividad]["FECHA"] -
+                                                     actividad.iloc[idx_actividad]["FECHAGRABACION"])\
+                                                     .total_seconds() / (60 * 60 * 24)
+
+                """if actividad.iloc[idx_actividad]["ESTADO"] != "CAP":
+                    df.loc[idx_actividad]["ESTADO"] = None
+                else:
+                    df.loc[idx_actividad]["ESTADO"] = actividad.iloc[idx_actividad]["ESTADO"]"""
+
+                """elif actividad.iloc[idx_actividad]["REALIZADA"] == "S" and actividad.iloc[idx_actividad]["ESTADO"] == "CAP" \
+                        and count != 40000:
+                    df.loc[idx_actividad]["REALIZADA"] = "N"
+                    count = count + 1"""
+
+                if actividad.iloc[idx_actividad]["ANTERIOR"] is None \
+                        or actividad.iloc[idx_actividad]["ANTERIOR"] != 0 \
+                        or actividad.iloc[idx_actividad]["ANTERIOR"] == "":
+                    df.loc[idx_salidas]["ANTERIOR"] = "S"
+                else:
+                    df.loc[idx_salidas]["ANTERIOR"] = "N"
+
+                if salidas.iloc[idx_salidas]["TURNO"] != "N":
+                    df.loc[idx_salidas]["TURNO"] = salidas.iloc[idx_salidas]["TURNO"]
+                else:
+                    df.loc[idx_salidas]["TURNO"] = None
+
+                if salidas.iloc[idx_salidas]["GR_ETARIO"] == "IA":
+                    df.loc[idx_salidas]["GR_ETARIO"] = "I"
+                else:
+                    df.loc[idx_salidas]["GR_ETARIO"] = salidas.iloc[idx_salidas]["GR_ETARIO"]
+
+                if salidas.iloc[idx_salidas]["LIBRELEC"] == 0:
+                    df.loc[idx_salidas]["LIBRELEC"] = 0
+                else:
+                    df.loc[idx_salidas]["LIBRELEC"] = 1
+                #df.loc[idx_salidas]["SOSPECHA"] = salidas.iloc[idx_salidas]["SOSPECHA"]
+                if salidas.iloc[idx_salidas]["TIPENTR"] == 1:
+                    df.loc[idx_salidas]["TIPENTR"] = 1
+                else:
+                    df.loc[idx_salidas]["TIPENTR"] = 0
+
+                if salidas.iloc[idx_salidas]["ULTESP"] == 1:
+                    df.loc[idx_salidas]["ULTESP"] = 1
+                else:
+                    df.loc[idx_salidas]["ULTESP"] = 0
+
+                if salidas.iloc[idx_salidas]["CIRPRES"] == 2 or salidas.iloc[idx_salidas]["CIRPRES"] == 4:
+                    df.loc[idx_salidas]["CIRPRES"] = 0
+                elif salidas.iloc[idx_salidas]["CIRPRES"] == 1:
+                    df.loc[idx_salidas]["CIRPRES"] = 1
+
+                #df.loc[idx_salidas]["TIPPRES"] = salidas.iloc[idx_salidas]["TIPPRES"]
+
+                if salidas.iloc[idx_salidas]["TIPSAL"] == 1 or salidas.iloc[idx_salidas]["TIPSAL"] == 2 \
+                        or salidas.iloc[idx_salidas]["TIPSAL"] == 3 or salidas.iloc[idx_salidas]["TIPSAL"] == 12 \
+                        or salidas.iloc[idx_salidas]["TIPSAL"] == 16 or salidas.iloc[idx_salidas]["TIPSAL"] == 17:
+                    df.loc[idx_salidas]["TIPSAL"] = 1
+                elif salidas.iloc[idx_salidas]["TIPSAL"] == 4 or salidas.iloc[idx_salidas]["TIPSAL"] == 5 \
+                        or salidas.iloc[idx_salidas]["TIPSAL"] == 6 or salidas.iloc[idx_salidas]["TIPSAL"] == 15:
+                    df.loc[idx_salidas]["TIPSAL"] = 0
+                break
+
+    """for idx_scae, nhc_scae in enumerate(scae["NHC_ENCRIPTADO"]):
+        for idx_salidas, nhc_salidas in enumerate(salidas["NHC_ENCRIPTADO"]):
+            if nhc_scae == nhc_salidas: 
+                df.loc[idx_salidas]["NHC"] = nhc_salidas
+                #df.loc[idx_salidas]["PREST"] = scae.iloc[idx_scae]["Prestación"]
+                #df.loc[idx_salidas]["PREFERENTE"] = scae.iloc[idx_scae]["Preferente"]
+                df.loc[idx_salidas]["EDAD"] = (scae.iloc[idx_scae]["Fecha Cita"] - scae.iloc[idx_scae][
+                    "Fecha de Nacimiento"]).total_seconds() / (60 * 60 * 24 * 365)
+                if salidas.iloc[idx_salidas]["TURNO"] != "N":
+                    df.loc[idx_salidas]["TURNO"] = salidas.iloc[idx_salidas]["TURNO"]
+                else:
+                    df.loc[idx_salidas]["TURNO"] = None
+
+                #df.loc[idx_salidas]["GR_ETARIO"] = salidas.iloc[idx_salidas]["GR_ETARIO"]
+
+                if salidas.iloc[idx_salidas]["LIBRELEC"] == 0:
+                    df.loc[idx_salidas]["LIBRELEC"] = 0
+                else:
+                    df.loc[idx_salidas]["LIBRELEC"] = 1
+                # df.loc[idx_salidas]["SOSPECHA"] = salidas.iloc[idx_salidas]["SOSPECHA"]
+                if salidas.iloc[idx_salidas]["TIPENTR"] == 1:
+                    df.loc[idx_salidas]["TIPENTR"] = 1
+                else:
+                    df.loc[idx_salidas]["TIPENTR"] = 0
+
+                if salidas.iloc[idx_salidas]["ULTESP"] == 1:
+                    df.loc[idx_salidas]["ULTESP"] = 1
+                else:
+                    df.loc[idx_salidas]["ULTESP"] = 0
+
+                if salidas.iloc[idx_salidas]["CIRPRES"] == 2 or salidas.iloc[idx_salidas]["CIRPRES"] == 4:
+                    df.loc[idx_salidas]["CIRPRES"] = 0
+                elif salidas.iloc[idx_salidas]["CIRPRES"] == 1:
+                    df.loc[idx_salidas]["CIRPRES"] = 1
+
+                # df.loc[idx_salidas]["TIPPRES"] = salidas.iloc[idx_salidas]["TIPPRES"]
+
+                if salidas.iloc[idx_salidas]["TIPSAL"] == 1 or salidas.iloc[idx_salidas]["TIPSAL"] == 2 \
+                        or salidas.iloc[idx_salidas]["TIPSAL"] == 3 or salidas.iloc[idx_salidas]["TIPSAL"] == 12 \
+                        or salidas.iloc[idx_salidas]["TIPSAL"] == 16 or salidas.iloc[idx_salidas]["TIPSAL"] == 17:
+                    df.loc[idx_salidas]["TIPSAL"] = 1
+                elif salidas.iloc[idx_salidas]["TIPSAL"] == 4 or salidas.iloc[idx_salidas]["TIPSAL"] == 5 \
+                        or salidas.iloc[idx_salidas]["TIPSAL"] == 6 or salidas.iloc[idx_salidas]["TIPSAL"] == 15:
+                    df.loc[idx_salidas]["TIPSAL"] = 0
+                break"""
+
+    df = pd.DataFrame.drop(df, columns=["NHC"])
+    df.replace([np.inf, -np.inf], np.nan)
+    df = df.dropna(subset=['TIPSAL'])
+
+    #df = df.dropna()
+    df = pd.get_dummies(df, columns=columns_to_expand)
+
+    return df
+
+
+def preprocessing2():
+    salidas = pd.read_excel(r'datos/actividad_salidas.xlsx')
+    """df = pd.DataFrame(index=range(len(salidas)), columns=["NHC", "DELTA_DIAS", "ANTERIOR", "TVISITA", "LIBRELEC",
+                                                          "SERVICIO", "TURNO", "CIRPRES", "ULTESP", "TIPENTR",
+                                                          "GR_ETARIO", "TIPSAL"])"""
+    df = pd.DataFrame(index=range(len(salidas)), columns=["NHC", "DELTA_DIAS", "ANTERIOR", "TVISITA", "LIBRELEC",
+                                                          "TURNO", "CIRPRES", "ULTESP", "TIPENTR", "SERVICIO",
+                                                          "TIPSAL", "GR_ETARIO"])
+    """df = pd.DataFrame(index=range(len(salidas)), columns=["NHC", "DELTA_DIAS", "ANTERIOR", "TVISITA", 
+                                                             "LIBRELEC", "SERVICIO", "TURNO", "CIRPRES", 
+                                                             "ULTESP", "TIPENTR", "GR_ETARIO", "TIPSAL",
+                                                             "PREST", "PREFERENTE"])"""
+
+    columns_to_expand = ["TVISITA", "ANTERIOR", "SERVICIO", "TURNO", "GR_ETARIO"]
+    #columns_to_expand = ["TVISITA", "ANTERIOR", "SERVICIO", "TURNO"]
+    #columns_to_expand = ["TVISITA", "ANTERIOR", "SERVICIO", "TURNO", "GR_ETARIO", "PREST", "PREFERENTE"]
+    salidas = salidas.drop_duplicates('NHC_ENCRIPTADO')
+
+    for idx_salidas, nhc_salidas in enumerate(salidas["NHC_ENCRIPTADO"]):
+        df.loc[idx_salidas]["NHC"] = nhc_salidas
+        df.loc[idx_salidas]["SERVICIO"] = salidas.iloc[idx_salidas]["SERVICIO"]
+        df.loc[idx_salidas]["TVISITA"] = salidas.iloc[idx_salidas]["TVISITA"]
+        #df.loc[idx_actividad]["PREST"] = actividad.iloc[idx_actividad]["PREST"]
+        #df.loc[idx_actividad]["DEMORA"] = actividad.iloc[idx_actividad]["DEMORA"]
+        #df.loc[idx_actividad]["PROCEDENCIA"] = actividad.iloc[idx_actividad]["PROCEDENCIA"]
+        df.loc[idx_salidas]["DELTA_DIAS"] = (salidas.iloc[idx_salidas]["FECHA"] -
+                                             salidas.iloc[idx_salidas]["FECHAGRABACION"])\
+                                             .total_seconds() / (60 * 60 * 24)
+
+        """if actividad.iloc[idx_actividad]["ESTADO"] != "CAP":
+            df.loc[idx_actividad]["ESTADO"] = None
+        else:
+            df.loc[idx_actividad]["ESTADO"] = actividad.iloc[idx_actividad]["ESTADO"]"""
+
+        """elif actividad.iloc[idx_actividad]["REALIZADA"] == "S" and actividad.iloc[idx_actividad]["ESTADO"] == "CAP" \
+                and count != 40000:
+            df.loc[idx_actividad]["REALIZADA"] = "N"
+            count = count + 1"""
+
+        if salidas.iloc[idx_salidas]["ANTERIOR"] is None \
+                or salidas.iloc[idx_salidas]["ANTERIOR"] != 0 \
+                or salidas.iloc[idx_salidas]["ANTERIOR"] == "":
+            df.loc[idx_salidas]["ANTERIOR"] = "S"
+        else:
+            df.loc[idx_salidas]["ANTERIOR"] = "N"
+
+        if salidas.iloc[idx_salidas]["TURNO"] != "N":
+            df.loc[idx_salidas]["TURNO"] = salidas.iloc[idx_salidas]["TURNO"]
+        else:
+            df.loc[idx_salidas]["TURNO"] = None
+
+        if salidas.iloc[idx_salidas]["GR_ETARIO"] == "IA":
+            df.loc[idx_salidas]["GR_ETARIO"] = "I"
+        else:
+            df.loc[idx_salidas]["GR_ETARIO"] = salidas.iloc[idx_salidas]["GR_ETARIO"]
+
+        if salidas.iloc[idx_salidas]["LIBRELEC"] == 0:
+            df.loc[idx_salidas]["LIBRELEC"] = 0
+        else:
+            df.loc[idx_salidas]["LIBRELEC"] = 1
+        #df.loc[idx_salidas]["SOSPECHA"] = salidas.iloc[idx_salidas]["SOSPECHA"]
+        if salidas.iloc[idx_salidas]["TIPENTR"] == 1:
+            df.loc[idx_salidas]["TIPENTR"] = 1
+        else:
+            df.loc[idx_salidas]["TIPENTR"] = 0
+
+        if salidas.iloc[idx_salidas]["ULTESP"] == 1:
+            df.loc[idx_salidas]["ULTESP"] = 1
+        else:
+            df.loc[idx_salidas]["ULTESP"] = 0
+
+        if salidas.iloc[idx_salidas]["CIRPRES"] == 2 or salidas.iloc[idx_salidas]["CIRPRES"] == 4:
+            df.loc[idx_salidas]["CIRPRES"] = 0
+        elif salidas.iloc[idx_salidas]["CIRPRES"] == 1:
+            df.loc[idx_salidas]["CIRPRES"] = 1
+
+        #df.loc[idx_salidas]["TIPPRES"] = salidas.iloc[idx_salidas]["TIPPRES"]
+
+        if salidas.iloc[idx_salidas]["TIPSAL"] == 1 or salidas.iloc[idx_salidas]["TIPSAL"] == 2 \
+                or salidas.iloc[idx_salidas]["TIPSAL"] == 3 or salidas.iloc[idx_salidas]["TIPSAL"] == 12 \
+                or salidas.iloc[idx_salidas]["TIPSAL"] == 16 or salidas.iloc[idx_salidas]["TIPSAL"] == 17:
+            df.loc[idx_salidas]["TIPSAL"] = 1
+        elif salidas.iloc[idx_salidas]["TIPSAL"] == 4 or salidas.iloc[idx_salidas]["TIPSAL"] == 5 \
+                or salidas.iloc[idx_salidas]["TIPSAL"] == 6 or salidas.iloc[idx_salidas]["TIPSAL"] == 15:
+            df.loc[idx_salidas]["TIPSAL"] = 0
+
+    df = pd.DataFrame.drop(df, columns=["NHC"])
+    df.replace([np.inf, -np.inf], np.nan)
+    df = df.dropna(subset=['TIPSAL'])
+
+    #df = df.dropna()
+    df = pd.get_dummies(df, columns=columns_to_expand)
+
+    return df
+
+
+if __name__ == '__main__':
+    #dataframe = preprocessing()
+    #dataframe = preprocessing2()
+    #dataframe.to_excel(r'/Users/zeyna/Documents/TFG/dataframes/df12.xlsx', index=False)
+    path_to_excel = r'dfs/df1.xlsx'
+    dataframe = pd.read_excel(path_to_excel)
+    """columns_count = ["TIPPRES", "CIRPRES", "ULTESP", "TIPENTR", "LIBRELEC", "TVISITA_P", "TVISITA_S", "TVISITA_P",
+                     "SERVICIO_GASB", "SERVICIO_GASC", "SERVICIO_GASE", "SERVICIO_GASH", "ANTERIOR_N", "ANTERIOR_S",
+                     "SOSPECHA_N", "SOSPECHA_S", "TURNO_N", "TURNO_M", "TURNO_T", "GR_ETARIO_IA", "GR_ETARIO_A"]"""
+    """columns_count = ["CIRPRES", "ULTESP", "TIPENTR", "LIBRELEC", "TVISITA_P", "TVISITA_S", "TVISITA_P",
+                     "SERVICIO_GASB", "SERVICIO_GASC", "SERVICIO_GASE", "SERVICIO_GASH", "ANTERIOR_N", "ANTERIOR_S",
+                     "TURNO_N", "TURNO_M", "TURNO_T", "GR_ETARIO_IA", "GR_ETARIO_A", "GR_ETARIO_I"]
+    main_exploratory(columns_count, dataframe)"""
+    random_forest(dataframe)
+    decision_tree(dataframe)

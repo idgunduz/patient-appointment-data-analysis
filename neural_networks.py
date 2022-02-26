@@ -60,6 +60,6 @@ def neural_networks(df):
 
 
 if __name__ == '__main__':
-    path_to_excel = r'/Users/zeyna/Documents/TFG/dfs/df1.xlsx'
+    path_to_excel = r'dfs/df1.xlsx'
     dataframe = pd.read_excel(path_to_excel)
     neural_networks(dataframe)
