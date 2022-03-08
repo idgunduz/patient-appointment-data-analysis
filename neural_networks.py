@@ -17,15 +17,16 @@ mpl.rcParams.update(mpl.rcParamsDefault)
 def neural_networks(df):
     target = df["TIPSAL"]
     df = df.drop(["TIPSAL"], axis=1)
-
     x, y = df.values, target.values
     scaler = StandardScaler()
     x_scaled = scaler.fit_transform(x)
     undersample = NearMiss(version=2, n_neighbors=3)
     x_under, y_under = undersample.fit_resample(x_scaled, y)
-    x_train, x_test, y_train, y_test = train_test_split(x_under, y_under, test_size=0.2, stratify=y_under, random_state=0)
+    x_train, x_test, y_train, y_test = train_test_split(x_under, y_under, test_size=0.2,
+                                                        stratify=y_under, random_state=0)
     model = Sequential()
-    model.add(Dense(512, activation='relu', input_dim=40))
+    model.add(Dense(512, activation='relu', input_dim=38))
+    #model.add(Dense(512, activation='relu', input_dim=40)) Cuando ejecutamos el df1
     model.add(Dense(512, activation='relu'))
     model.add(Dense(1, activation='sigmoid'))
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
@@ -49,6 +50,6 @@ def neural_networks(df):
 
 
 if __name__ == '__main__':
-    path_to_excel = r'dfs/df1.xlsx'
+    path_to_excel = r'dfs/df2.xlsx'
     dataframe = pd.read_excel(path_to_excel)
     neural_networks(dataframe)

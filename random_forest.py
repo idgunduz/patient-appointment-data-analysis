@@ -28,25 +28,29 @@ def random_forest(df):
     x_scaled = scaler.fit_transform(x)
     undersample = NearMiss(version=2, n_neighbors=3)
     x_under, y_under = undersample.fit_resample(x_scaled, y)
-    x_train, x_test, y_train, y_test = train_test_split(x_under, y_under, stratify=y_under, test_size=0.2, random_state=7)
+    x_train, x_test, y_train, y_test = train_test_split(x_under, y_under, stratify=y_under,
+                                                        test_size=0.2, random_state=7)
     classifier = RandomForestClassifier()
     classifier.fit(x_train.astype(int), y_train.astype(int))
     y_pred = classifier.predict(x_test.astype(int))
-    print("Accuracy:", metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
+    print(metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
     print("Accuracy:", metrics.accuracy_score(y_test.astype(int), y_pred.astype(int)))
-    TP, FN, FP, TN = confusion_matrix(y_test.astype(int), y_pred.astype(int), labels=[1, 0]).reshape(-1)
+    TN, FN, FP, TP = confusion_matrix(y_test.astype(int), y_pred.astype(int),
+                                      labels=[1, 0]).reshape(-1)
+    print(confusion_matrix(y_test.astype(int), y_pred.astype(int)))
     specificity = TN / (TN + FP)
     sensitivity = TP / (TP + FN)
     print(f'Specificidad: {specificity}')
     print(f'Sensibilidad: {sensitivity}')
-    feature_importances_df = pd.DataFrame(
-        {"feature": list(df.columns), "importance": classifier.feature_importances_}).sort_values("importance",
-                                                                                                 ascending=False)
+    feature_importances_df = pd.DataFrame({"feature": list(df.columns),
+                                           "importance": classifier.feature_importances_})\
+                                           .sort_values("importance", ascending=False)
+
     sns.barplot(x=feature_importances_df.feature, y=feature_importances_df.importance)
-    plt.xlabel("Feature Importance Score")
-    plt.ylabel("Features")
+    plt.xlabel("Features")
+    plt.ylabel("Feature Importance Score")
     plt.title("Visualizing Important Features")
-    plt.xticks(rotation=45, horizontalalignment="right", fontweight="light", fontsize="large")
+    plt.xticks(rotation=45, horizontalalignment="right", fontweight="light", fontsize=10)
     plt.show()
 
 
@@ -62,7 +66,7 @@ def decision_tree(df):
     classifier = DecisionTreeClassifier()
     classifier.fit(x_train.astype(int), y_train.astype(int))
     y_pred = classifier.predict(x_test.astype(int))
-    print("Accuracy:", metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
+    print(metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
     print("Accuracy:", metrics.accuracy_score(y_test.astype(int), y_pred.astype(int)))
     TP, FN, FP, TN = confusion_matrix(y_test.astype(int), y_pred.astype(int), labels=[1, 0]).reshape(-1)
     specificity = TN / (TN + FP)
@@ -276,7 +280,7 @@ if __name__ == '__main__':
     #dataframe = preprocessing()
     #dataframe = preprocessing2()
     #dataframe.to_excel(r'/Users/zeyna/Documents/TFG/dataframes/df12.xlsx', index=False)
-    path_to_excel = r'dfs/df1.xlsx'
+    path_to_excel = r'dfs/df2.xlsx'
     dataframe = pd.read_excel(path_to_excel)
     random_forest(dataframe)
     decision_tree(dataframe)

@@ -120,17 +120,15 @@ def iterate_data_files():
     with concurrent.futures.ThreadPoolExecutor() as executor:
         f1 = executor.submit(pd.read_excel, path_to_salidas)
         f2 = executor.submit(pd.read_excel, path_to_actividad)
-        #f3 = executor.submit(pd.read_excel, path_to_scae)
 
         salidas = f1.result()
         actividad = f2.result()
-        #scae = f3.result()
 
-    df = pd.DataFrame(index=range(len(salidas)), columns=["NHC", "DELTA_DIAS", "ANTERIOR", "TVISITA", "LIBRELEC",
+    df = pd.DataFrame(index=range(len(salidas)), columns=["NHC", "DELTA_DIAS", "TVISITA", "LIBRELEC",
                                                           "TURNO", "CIRPRES", "ULTESP", "TIPENTR", "SERVICIO",
                                                           "TIPSAL", "GR_ETARIO", "SEXO", "RANGOEDAD"])
 
-    columns_to_expand = ["TVISITA", "ANTERIOR", "SERVICIO", "TURNO", "GR_ETARIO", "RANGOEDAD", "SEXO"]
+    columns_to_expand = ["TVISITA", "SERVICIO", "TURNO", "GR_ETARIO", "RANGOEDAD", "SEXO"]
     salidas = salidas.drop_duplicates('NHC_ENCRIPTADO')
     actividad = actividad.drop_duplicates('NHC_ENCRIPTADO')
     #scae = scae.drop_duplicates('NHC_ENCRIPTADO')
@@ -144,13 +142,6 @@ def iterate_data_files():
                 df.loc[idx_salidas]["DELTA_DIAS"] = (actividad.iloc[idx_actividad]["FECHA"] -
                                                      actividad.iloc[idx_actividad]["FECHAGRABACION"])\
                                                      .total_seconds() / (60 * 60 * 24)
-
-                if actividad.iloc[idx_actividad]["ANTERIOR"] is None \
-                        or actividad.iloc[idx_actividad]["ANTERIOR"] != 0 \
-                        or actividad.iloc[idx_actividad]["ANTERIOR"] == "":
-                    df.loc[idx_salidas]["ANTERIOR"] = "S"
-                else:
-                    df.loc[idx_salidas]["ANTERIOR"] = "N"
 
                 if salidas.iloc[idx_salidas]["TURNO"] != "N":
                     df.loc[idx_salidas]["TURNO"] = salidas.iloc[idx_salidas]["TURNO"]
@@ -243,7 +234,6 @@ def iterate_data_files():
     df = pd.DataFrame.drop(df, columns=["NHC"])
     df.replace([np.inf, -np.inf], np.nan)
     df = df.dropna(subset=['TIPSAL'])
-    df.to_excel(r'/Users/zeyna/Documents/TFG/dfs/df_to_explore.xlsx', index=False)
     df = pd.get_dummies(df, columns=columns_to_expand)
 
     return df
@@ -253,8 +243,8 @@ if __name__ == '__main__':
     #concat_actividad_datos_y_codigos_files()
     #concat_data_files()
     #iterate_concat_data_files()
-    #dataframe = iterate_data_files()
-    #dataframe.to_excel(r'/Users/zeyna/Documents/TFG/dfs/df1.xlsx', index=False)
+    """dataframe = iterate_data_files()
+    dataframe.to_excel(r'dfs/df2.xlsx', index=False)"""
     path_to_excel = r'dfs/df_to_explore.xlsx'
     dataframe = pd.read_excel(path_to_excel)
     columns_count = ["ANTERIOR", "TVISITA", "LIBRELEC", "TURNO", "CIRPRES", "ULTESP", "TIPENTR",

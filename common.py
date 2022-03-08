@@ -31,26 +31,15 @@ def preprocess():
         salidas = f1.result()
         actividad = f2.result()
 
-    salidas = salidas.loc[salidas.COD_PRESTA == "CPRIMERA"]
-    salidas = salidas.reset_index(drop=True)
+    salidas = salidas.drop_duplicates('NHC')
     actividad = actividad.drop_duplicates('NHC')
-    df = salidas
-    df.loc[salidas["TIPENTR"] == 1, "TIPENTR"] = 0
-    df.loc[salidas["TIPENTR"] != 0, "TIPENTR"] = 1
-    df.loc[salidas["ULTESP"] == 1, "ULTESP"] = 0
-    df.loc[salidas["ULTESP"] != 0, "ULTESP"] = 1
-    salidas1 = salidas.loc[salidas["TIPSAL"] == 1]
-    salidas_faltas = salidas.loc[salidas["TIPSAL"] != 1]
-    salidas_faltas["TIPSAL"] = 0
-    df = pd.concat([salidas1, salidas_faltas])
-    labels_to_drop = ["NUMICU", "CIPA", "SERVIC_AUT", "SERVIC", "SERV_LOCAL", "TIPPRES", "CIRPRES", "FI", "FV",
-                      "FH", "FH_AGENDA", "FS", "AGENDA", "FC", "FG", "COD_PRESTA", "PRESTA_LOCAL"]
-    df = pd.DataFrame.drop(df, columns=labels_to_drop)
-    df["SEXO"] = ""
-    df["EDAD"] = ""
+    df = pd.DataFrame(index=range(len(salidas)), columns=["NHC", "DELTA_DIAS", "ULTESP", "TIPENTR", "SEXO", "EDAD",
+                                                          "TIPSAL"])
+
     for idx_salidas, cipa_salidas in enumerate(salidas["CIPA"]):
         for idx_actividad, cipa_actividad in enumerate(actividad["CIPA"]):
             if cipa_salidas == cipa_actividad:
+                df.loc[idx_salidas]["NHC"] = salidas.iloc[idx_salidas]["NHC"]
                 if actividad.iloc[idx_actividad]["SEXO"] == "V":
                     df.loc[idx_salidas]["SEXO"] = 0
                 if actividad.iloc[idx_actividad]["SEXO"] == "M":
@@ -58,18 +47,33 @@ def preprocess():
                 df.loc[idx_salidas]["EDAD"] = (salidas.iloc[idx_salidas]["FC"] -
                                                actividad.iloc[idx_actividad]["FECHANAC"]) \
                                                   .total_seconds() / (60 * 60 * 24 * 365)
+                df.loc[idx_salidas]["DELTA_DIAS"] = (actividad.iloc[idx_actividad]["FECHA"] -
+                                                     salidas.iloc[idx_salidas]["FG"]) \
+                                                        .total_seconds() / (60 * 60 * 24)
+                if salidas.iloc[idx_salidas]["TIPENTR"] == 1:
+                    df.loc[idx_salidas]["TIPENTR"] = 1
+                else:
+                    df.loc[idx_salidas]["TIPENTR"] = 0
+
+                if salidas.iloc[idx_salidas]["ULTESP"] == 1:
+                    df.loc[idx_salidas]["ULTESP"] = 1
+                else:
+                    df.loc[idx_salidas]["ULTESP"] = 0
+                if salidas.iloc[idx_salidas]["TIPSAL"] == 1 or salidas.iloc[idx_salidas]["TIPSAL"] == 2 \
+                        or salidas.iloc[idx_salidas]["TIPSAL"] == 3 or salidas.iloc[idx_salidas]["TIPSAL"] == 12 \
+                        or salidas.iloc[idx_salidas]["TIPSAL"] == 16 or salidas.iloc[idx_salidas]["TIPSAL"] == 17:
+                    df.loc[idx_salidas]["TIPSAL"] = 1
+                elif salidas.iloc[idx_salidas]["TIPSAL"] == 4 or salidas.iloc[idx_salidas]["TIPSAL"] == 5 \
+                        or salidas.iloc[idx_salidas]["TIPSAL"] == 6 or salidas.iloc[idx_salidas]["TIPSAL"] == 15:
+                    df.loc[idx_salidas]["TIPSAL"] = 0
+                break
 
     df.replace([np.inf, -np.inf], np.nan)
-    df = df.dropna(subset=["EDAD"])
-    df = df.dropna(subset=["NHC"])
-    df = df.dropna(subset=["TIPENTR"])
-    df = df.dropna(subset=["DELTA_DIAS"])
-    df = df.dropna(subset=["ULTESP"])
     df = df.dropna(subset=["TIPSAL"])
-    median_imputer = SimpleImputer(missing_values=np.nan, strategy='median')
+    """median_imputer = SimpleImputer(missing_values=np.nan, strategy='median')
     median_imputer = median_imputer.fit(df)
     imputed_df = median_imputer.transform(df.values)
-    df = pd.DataFrame(data=imputed_df, columns=df.columns)
+    df = pd.DataFrame(data=imputed_df, columns=df.columns)"""
     #df = pd.get_dummies(df, columns=columns_to_convert_to_numeric_value)
     # TODO: Delete columns that have low ocurrences
 
@@ -102,6 +106,10 @@ def load_and_preprocess(con_sexo=True, con_edad=True, con_distancia=True, sin_de
 
     actividad = actividad.drop_duplicates('NHC')
     salidas = salidas.loc[salidas.COD_PRESTA == "CPRIMERA"]
+    sexo_index_salidas = None
+    sexo_index_actividad = None
+    fnac_index_salidas = None
+    fnac_index_actividad = None
 
     if con_sexo:
         salidas["SEXO"] = ""
@@ -166,7 +174,6 @@ def load_and_preprocess(con_sexo=True, con_edad=True, con_distancia=True, sin_de
     if agrupar_ausencias:
         salidas_faltas["TIPSAL"] = 5
     salidas = pd.concat([salidas1, salidas_faltas])
-    # TODO: Delete columns that have low ocurrences
 
     return salidas
 

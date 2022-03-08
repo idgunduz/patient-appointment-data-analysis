@@ -1,15 +1,20 @@
+from collections import Counter
+
 import fasttext as ft
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+from imblearn.over_sampling import SMOTE
+from matplotlib import pyplot
+from numpy import where
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
 from sklearn import metrics
-
+from sklearn.tree import DecisionTreeClassifier
 
 path_to_file = "datos/DATOS_DIGESTIVO.xlsx"
 
@@ -93,7 +98,6 @@ def medical_model():
     salidas_faltas = pd.concat(salidas_faltas)
     salidas_faltas["TIPSAL"] = 0
     salidas_medical = pd.concat([salidas1, salidas_faltas])
-    salidas_medical.to_excel(r'/Users/zeyna/Documents/TFG/df2.xlsx', index=True)
     y = salidas_medical["TIPSAL"]
     x = pd.DataFrame.drop(salidas_medical, columns=["TIPSAL"])
     print(x.shape)
@@ -102,15 +106,16 @@ def medical_model():
     classifier.fit(x_train.astype(int), y_train.astype(int))
     y_pred = classifier.predict(x_test)
     print("Accuracy:", metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
-    print("Accuracy:", metrics.accuracy_score(y_test.astype(int), y_pred.astype(int)))
-    TP, FN, FP, TN = confusion_matrix(y_test.astype(int), y_pred.astype(int), labels=[1, 0]).reshape(-1)
+    print(metrics.accuracy_score(y_test.astype(int), y_pred.astype(int)))
+    print(confusion_matrix(y_test.astype(int), y_pred.astype(int)))
+    """TP, FN, FP, TN = confusion_matrix(y_test.astype(int), y_pred.astype(int), labels=[1, 0]).reshape(-1)
     specificity = TN / (TN + FP)
     sensitivity = TP / (TP + FN)
     print(f'Specificidad: {specificity}')
-    print(f'Sensibilidad: {sensitivity}')
-    feature_importances_df = pd.DataFrame(
-        {"feature": list(x.columns), "importance": classifier.feature_importances_}).sort_values("importance",
-                                                                                                 ascending=False)
+    print(f'Sensibilidad: {sensitivity}')"""
+    feature_importances_df = pd.DataFrame({"feature": list(x.columns),
+                                           "importance": classifier.feature_importances_})\
+                                            .sort_values("importance", ascending=False)
     sns.barplot(x=feature_importances_df.feature, y=feature_importances_df.importance)
     plt.xlabel("Feature Importance Score")
     plt.ylabel("Features")
@@ -201,31 +206,24 @@ def medical_model2():
     df.drop(empty_description_idx)
     df = df.reset_index(drop=True)
     df = pd.DataFrame.drop(df, columns=["NHC"])
-
-    salidas1 = df.loc[df["TIPSAL"] == 1]
-    salidas5 = df.loc[df["TIPSAL"] == 5]
-    salidas6 = df.loc[df["TIPSAL"] == 6]
-    salidas7 = df.loc[df["TIPSAL"] == 7]
-    salidas10 = df.loc[df["TIPSAL"] == 10]
-    salidas_faltas = [salidas5, salidas6, salidas7, salidas10]
-    salidas_faltas = pd.concat(salidas_faltas)
-    salidas_faltas["TIPSAL"] = 0
-    df = pd.concat([salidas1, salidas_faltas])
-    df.to_excel(r'/Users/zeyna/Documents/TFG/df.xlsx', index=True)
+    #df.to_excel(r'/Users/zeyna/Documents/TFG/dfs/df_observaciones_1.xlsx', index=False)
     y = df["TIPSAL"]
     x = pd.DataFrame.drop(df, columns=["TIPSAL"])
-    print(x.shape)
-    x_train, x_test, y_train, y_test = train_test_split(x, y, stratify=y, random_state=0)
+    counter = Counter(y)
+    print(counter)
+
+    oversample = SMOTE()
+    x, y = oversample.fit_resample(x.astype(int), y.astype(int))
+    counter = Counter(y)
+    print(counter)
+
+    x_train, x_test, y_train, y_test = train_test_split(x, y, stratify=y, test_size=0.2, random_state=0)
     classifier = RandomForestClassifier(n_estimators=100)
     classifier.fit(x_train.astype(int), y_train.astype(int))
     y_pred = classifier.predict(x_test)
-    print("Accuracy:", metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
+    print(metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
     print("Accuracy:", metrics.accuracy_score(y_test.astype(int), y_pred.astype(int)))
-    TP, FN, FP, TN = confusion_matrix(y_test.astype(int), y_pred.astype(int), labels=[1, 0]).reshape(-1)
-    specificity = TN / (TN + FP)
-    sensitivity = TP / (TP + FN)
-    print(f'Specificidad: {specificity}')
-    print(f'Sensibilidad: {sensitivity}')
+    print(confusion_matrix(y_test.astype(int), y_pred.astype(int)))
     feature_importances_df = pd.DataFrame(
         {"feature": list(x.columns), "importance": classifier.feature_importances_}).sort_values("importance",
                                                                                                  ascending=False)
@@ -238,4 +236,4 @@ def medical_model2():
 
 
 if __name__ == "__main__":
-    medical_model()
+    medical_model2()
