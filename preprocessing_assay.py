@@ -1,9 +1,9 @@
 import matplotlib as mpl
 import concurrent.futures
 import numpy as np
+import pandas as pd
 
-from common import *
-from exploratory2 import main_exploratory
+from exploratory import main_exploratory
 
 mpl.rcParams.update(mpl.rcParamsDefault)
 
@@ -245,8 +245,3 @@ if __name__ == '__main__':
     #iterate_concat_data_files()
     """dataframe = iterate_data_files()
     dataframe.to_excel(r'dfs/df2.xlsx', index=False)"""
-    path_to_excel = r'dfs/df_to_explore.xlsx'
-    dataframe = pd.read_excel(path_to_excel)
-    columns_count = ["ANTERIOR", "TVISITA", "LIBRELEC", "TURNO", "CIRPRES", "ULTESP", "TIPENTR",
-                     "SERVICIO", "GR_ETARIO", "SEXO", "RANGOEDAD"]
-    main_exploratory(columns_count, dataframe)

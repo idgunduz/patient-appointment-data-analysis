@@ -1,147 +1,118 @@
-from collections import Counter
-
 import fasttext as ft
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
-from imblearn.over_sampling import SMOTE
-from matplotlib import pyplot
-from numpy import where
+import re
 
+from imblearn.over_sampling import SMOTE
+from collections import Counter
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
 from sklearn import metrics
-from sklearn.tree import DecisionTreeClassifier
 
 path_to_file = "datos/DATOS_DIGESTIVO.xlsx"
 
 
-def medical_model():
+def preprocess():
+    import concurrent.futures
+    import numpy as np
 
-    from common import load_and_preprocess, get_words
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        f1 = executor.submit(pd.read_excel, path_to_file, sheet_name="SALIDAS")
+        f2 = executor.submit(pd.read_excel, path_to_file, sheet_name="ACTIVIDAD")
+        salidas = f1.result()
+        actividad = f2.result()
 
-    model = ft.load_model(r"/Users/zeyna/Documents/TFG/modelo_lenguaje/Scielo_wiki_FastText300.bin")
-    salidas_medical = load_and_preprocess(sin_desconocidos=True, sin_NHC=False)
+    salidas = salidas.drop_duplicates('NHC')
+    actividad = actividad.drop_duplicates('NHC')
+    df = pd.DataFrame(index=range(len(salidas)), columns=["NHC", "DELTA_DIAS", "ULTESP", "TIPENTR",
+                                                          "SEXO", "EDAD", "TIPSAL"])
 
-    scae = pd.read_excel(path_to_file, sheet_name="SCAE")
-    observations = scae["Observaciones PIC"]
+    for idx_salidas, cipa_salidas in enumerate(salidas["CIPA"]):
+        for idx_actividad, cipa_actividad in enumerate(actividad["CIPA"]):
+            if cipa_salidas == cipa_actividad:
+                df.loc[idx_salidas]["NHC"] = salidas.iloc[idx_salidas]["NHC"]
+                if actividad.iloc[idx_actividad]["SEXO"] == "V":
+                    df.loc[idx_salidas]["SEXO"] = 0
+                if actividad.iloc[idx_actividad]["SEXO"] == "M":
+                    df.loc[idx_salidas]["SEXO"] = 1
+                df.loc[idx_salidas]["EDAD"] = (salidas.iloc[idx_salidas]["FC"] -
+                                               actividad.iloc[idx_actividad]["FECHANAC"]) \
+                                                  .total_seconds() / (60 * 60 * 24 * 365)
+                df.loc[idx_salidas]["DELTA_DIAS"] = (actividad.iloc[idx_actividad]["FECHA"] -
+                                                     salidas.iloc[idx_salidas]["FG"]) \
+                                                        .total_seconds() / (60 * 60 * 24)
 
-    embed_index = []
-    for i in range(0, 50):
-        salidas_medical[f"c{i}"] = 0
-        embed_index.append(list(salidas_medical).index(f"c{i}"))
-    all_sentence_embeddings = np.empty((0, 300), dtype=np.float32)
+                if salidas.iloc[idx_salidas]["TIPENTR"] == 1:
+                    df.loc[idx_salidas]["TIPENTR"] = 1
+                else:
+                    df.loc[idx_salidas]["TIPENTR"] = 0
 
-    for idx_salidas, nhc_salidas in enumerate(salidas_medical["NHC"]):
-        for idx_scae, nhc_scae in enumerate(scae["NHC"]):
-            if nhc_salidas == (nhc_scae.upper()):
-                if not pd.isnull(observations[idx_scae]):
-                    patient_words = get_words(observations[idx_scae])
-                    vector = np.zeros((1, 300))
-                    for word in patient_words:
-                        embedded_word = model.get_word_vector(word)
-                        is_empty = embedded_word == np.zeros((1, 300))
-                        if not is_empty.all():
-                            vector += embedded_word
-                    all_sentence_embeddings = np.append(all_sentence_embeddings, vector, axis=0)
-                    break
+                if salidas.iloc[idx_salidas]["ULTESP"] == 1:
+                    df.loc[idx_salidas]["ULTESP"] = 1
+                else:
+                    df.loc[idx_salidas]["ULTESP"] = 0
+                if salidas.iloc[idx_salidas]["TIPSAL"] == 1 or \
+                        salidas.iloc[idx_salidas]["TIPSAL"] == 2 \
+                        or salidas.iloc[idx_salidas]["TIPSAL"] == 3 or \
+                        salidas.iloc[idx_salidas]["TIPSAL"] == 12 \
+                        or salidas.iloc[idx_salidas]["TIPSAL"] == 16 or \
+                        salidas.iloc[idx_salidas]["TIPSAL"] == 17:
+                    df.loc[idx_salidas]["TIPSAL"] = 1
+                elif salidas.iloc[idx_salidas]["TIPSAL"] == 4 or \
+                        salidas.iloc[idx_salidas]["TIPSAL"] == 5 \
+                        or salidas.iloc[idx_salidas]["TIPSAL"] == 6 or \
+                        salidas.iloc[idx_salidas]["TIPSAL"] == 15:
+                    df.loc[idx_salidas]["TIPSAL"] = 0
+                break
 
+    df.replace([np.inf, -np.inf], np.nan)
+    df = df.dropna(subset=["TIPSAL"])
+
+    return df
+
+
+def get_words(content):
     """
-    import io
-    # Write out the embedding vectors and metadata
-    out_v = io.open('vecs.tsv', 'w', encoding='utf-8')
-    out_m = io.open('meta.tsv', 'w', encoding='utf-8')
-    for word_num in range(0, 50):
-        word = words[word_num]
-        out_m.write(word + "\n")
-        out_v.write('\t'.join([str(x) for x in all_sentence_embeddings]) + "\n")
-    out_v.close()
-    out_m.close()
+    Gets all unique words of a string without stopwords or symbols.
+    :param content: str, text to process
+    :return: list of str, list of unique words in content
     """
 
-    pca = PCA(n_components=50)
-    pca.fit(all_sentence_embeddings)
-    empty_description_idx = []
+    to_substitute = [(r"\(-\)", "negativo"), (r"\.", " "), (",", " "), (r"/", " "), (r"\|", " "),
+                     ("á", "a"), ("é", "e"), ("í", "i"), ("ó", "o"), ("ú", "u"), ("ñ", "n"), (r"\(", " "),
+                     (r"\)", " "), (r"\*", " "), (r"-", " "), (r"\bca\b", "cancer")]
 
-    for idx_salidas, nhc_salidas in enumerate(salidas_medical["NHC"]):
-        for idx_scae, nhc_scae in enumerate(scae["NHC"]):
-            if nhc_salidas == (nhc_scae.upper()):
-                if not pd.isnull(observations[idx_scae]):
-                    patient_words = get_words(observations[idx_scae])
-                    vector = np.zeros((1, 300))
-                    for word in patient_words:
-                        embedded_word = model.get_word_vector(word)
-                        if embedded_word.any():
-                            vector += embedded_word
-                    is_empty = vector == np.zeros((1, 300))
-                    if not vector.all():
-                        empty_description_idx.append(idx_salidas)
-                    else:
-                        vector = pca.transform(vector)
-                    for ind, element in enumerate(vector[0]):
-                        salidas_medical.iloc[idx_salidas, embed_index[ind]] = element
-                    break
+    to_delete = ("ruego", r"\bdel\b", r"\bha\b", "pido", "valoracion", "solicito", r"\b[a-zA-Z]\b", "saludo",
+                 "gracias", "remito", "deriva ", "derivo", "rogamos", "recomiendo", r"\bun\b",
+                 r"\bde\b", r"\bpara\b", r"\bpor\b", r"\bla\b", r"\bni\b", r"\be.\b", r"\bno\b", r"\bhacia\b",
+                 r"[\d\-\+\*\?\"\:\<\>]", r"\bbien\b", r"\bcon\b", r"\banos\b", r"\bse\b", r"\bhace\b", r"\bque\b",
+                 r"\bsin\b", r"\bya\b", r"\bpaciente\b", r"\bdesde\b", r"\brefiere\b", r"\blos\b", r"\bmeses\b",
+                 r"\bpeso\b", r"\bl.\b", r"\bmes\b", r"\bmas\b", r"\bb\b", r"\bef\b", r"\bap\b", r"\bsi\b", r"\btras\b",
+                 r"\baf\b", r"\bvalora\b", r"\best.\b", r"\bal\b", r"\bpresenta\b", r"\bpero\b", r"\bdx\b", r"\bhan\b",
+                 r"\b\vuestra\b", r"\bveo\b", r"\buna\b", r"\bvalorar\b", r"\bver\b")
 
-    salidas_medical.drop(empty_description_idx)
-    salidas_medical = pd.DataFrame.drop(salidas_medical, columns=["NHC"])
-    salidas_medical = pd.get_dummies(salidas_medical, columns=["SEXO"])
-    salidas_medical = pd.DataFrame.drop(salidas_medical, columns=["SEXO_"])
-    salidas1 = salidas_medical.loc[salidas_medical["TIPSAL"] == 1]
-    salidas5 = salidas_medical.loc[salidas_medical["TIPSAL"] == 5]
-    salidas6 = salidas_medical.loc[salidas_medical["TIPSAL"] == 6]
-    salidas7 = salidas_medical.loc[salidas_medical["TIPSAL"] == 7]
-    salidas10 = salidas_medical.loc[salidas_medical["TIPSAL"] == 10]
-    salidas_faltas = [salidas5, salidas6, salidas7, salidas10]
-    salidas_faltas = pd.concat(salidas_faltas)
-    salidas_faltas["TIPSAL"] = 0
-    salidas_medical = pd.concat([salidas1, salidas_faltas])
-    y = salidas_medical["TIPSAL"]
-    x = pd.DataFrame.drop(salidas_medical, columns=["TIPSAL"])
-    print(x.shape)
-    x_train, x_test, y_train, y_test = train_test_split(x, y, stratify=y, random_state=0)
-    classifier = RandomForestClassifier(n_estimators=100)
-    classifier.fit(x_train.astype(int), y_train.astype(int))
-    y_pred = classifier.predict(x_test)
-    print("Accuracy:", metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
-    print(metrics.accuracy_score(y_test.astype(int), y_pred.astype(int)))
-    print(confusion_matrix(y_test.astype(int), y_pred.astype(int)))
-    """TP, FN, FP, TN = confusion_matrix(y_test.astype(int), y_pred.astype(int), labels=[1, 0]).reshape(-1)
-    specificity = TN / (TN + FP)
-    sensitivity = TP / (TP + FN)
-    print(f'Specificidad: {specificity}')
-    print(f'Sensibilidad: {sensitivity}')"""
-    feature_importances_df = pd.DataFrame({"feature": list(x.columns),
-                                           "importance": classifier.feature_importances_})\
-                                            .sort_values("importance", ascending=False)
-    sns.barplot(x=feature_importances_df.feature, y=feature_importances_df.importance)
-    plt.xlabel("Feature Importance Score")
-    plt.ylabel("Features")
-    plt.title("Visualizing Important Features")
-    plt.xticks(rotation=45, horizontalalignment="right", fontweight="light", fontsize="large")
-    plt.show()
+    content = content.lower()
+    for subs in to_substitute:
+        content = re.sub(subs[0], subs[1], content)
 
-    """clf2 = DecisionTreeClassifier(random_state=0, class_weight='balanced', ccp_alpha=0.002)
-    clf2.fit(x_train, y_train)
-    y_score = clf2.predict_proba(x_test)
-    y_pred = clf2.predict(x_test)
-    print("Embedding model")
-    print("Accuracy:", metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
-    print("Accuracy:", metrics.accuracy_score(y_test.astype(int), y_pred.astype(int)))
-    TP, FN, FP, TN = confusion_matrix(y_test.astype(int), y_pred.astype(int), labels=[1, 0]).reshape(-1)
-    specificity = TN / (TN + FP)
-    sensitivity = TP / (TP + FN)
-    print(f'Specificidad: {specificity}')
-    print(f'Sensibilidad: {sensitivity}')"""
+    for dels in to_delete:
+        content = re.sub(dels, "", content)
+
+    word_list = [x for x in content.split(" ") if x]
+    content = list(dict.fromkeys(word_list))
+
+    return content
 
 
-def medical_model2():
+def main():
 
-    from common import preprocess, get_words
+    path_model = r"/Users/zeyna/Documents/TFG/modelo_lenguaje/Scielo_wiki_FastText300.bin"
+    model = ft.load_model(path_model)
 
-    model = ft.load_model(r"/Users/zeyna/Documents/TFG/modelo_lenguaje/Scielo_wiki_FastText300.bin")
     df = preprocess()
 
     scae = pd.read_excel(path_to_file, sheet_name="SCAE")
@@ -206,7 +177,8 @@ def medical_model2():
     df.drop(empty_description_idx)
     df = df.reset_index(drop=True)
     df = pd.DataFrame.drop(df, columns=["NHC"])
-    #df.to_excel(r'/Users/zeyna/Documents/TFG/dfs/df_observaciones_1.xlsx', index=False)
+    #df.to_excel(r'dfs/df_observaciones_1.xlsx', index=False)
+
     y = df["TIPSAL"]
     x = pd.DataFrame.drop(df, columns=["TIPSAL"])
     counter = Counter(y)
@@ -217,13 +189,20 @@ def medical_model2():
     counter = Counter(y)
     print(counter)
 
-    x_train, x_test, y_train, y_test = train_test_split(x, y, stratify=y, test_size=0.2, random_state=0)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, stratify=y, test_size=0.2,
+                                                        random_state=0)
+    print(f"x_test: {len(x_test)}")
+    print(f"x_train: {len(x_train)}")
+    print(f"y_test: {len(y_test)}")
+    print(f"y_train: {len(y_train)}")
     classifier = RandomForestClassifier(n_estimators=100)
     classifier.fit(x_train.astype(int), y_train.astype(int))
+
     y_pred = classifier.predict(x_test)
     print(metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
     print("Accuracy:", metrics.accuracy_score(y_test.astype(int), y_pred.astype(int)))
     print(confusion_matrix(y_test.astype(int), y_pred.astype(int)))
+
     feature_importances_df = pd.DataFrame(
         {"feature": list(x.columns), "importance": classifier.feature_importances_}).sort_values("importance",
                                                                                                  ascending=False)
@@ -236,4 +215,4 @@ def medical_model2():
 
 
 if __name__ == "__main__":
-    medical_model2()
+    main()

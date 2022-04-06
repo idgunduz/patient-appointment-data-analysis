@@ -2,12 +2,13 @@ import numpy as np
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import pandas as pd
 
+from collections import Counter
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from imblearn.under_sampling import NearMiss
-from common import *
 from keras.models import Sequential
 from keras.layers import Dense
 from sklearn import metrics
@@ -18,12 +19,20 @@ def neural_networks(df):
     target = df["TIPSAL"]
     df = df.drop(["TIPSAL"], axis=1)
     x, y = df.values, target.values
+    counter = Counter(y)
+    print(counter)
     scaler = StandardScaler()
     x_scaled = scaler.fit_transform(x)
     undersample = NearMiss(version=2, n_neighbors=3)
     x_under, y_under = undersample.fit_resample(x_scaled, y)
+    counter = Counter(y_under)
+    print(counter)
     x_train, x_test, y_train, y_test = train_test_split(x_under, y_under, test_size=0.2,
                                                         stratify=y_under, random_state=0)
+    print(f"x_test: {len(x_test)}")
+    print(f"x_train: {len(x_train)}")
+    print(f"y_test: {len(y_test)}")
+    print(f"y_train: {len(y_train)}")
     model = Sequential()
     model.add(Dense(512, activation='relu', input_dim=38))
     #model.add(Dense(512, activation='relu', input_dim=40)) Cuando ejecutamos el df1
@@ -43,6 +52,7 @@ def neural_networks(df):
     plt.ylabel('Accuracy')
     plt.legend(loc='lower right')
     plt.plot()
+    plt.show()
     y_pred = model.predict(x_test)
     preds = np.round(y_pred, 0)
     print(confusion_matrix(y_test, preds))
