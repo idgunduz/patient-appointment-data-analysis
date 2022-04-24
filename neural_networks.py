@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from collections import Counter
+from keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV, KFold
 from imblearn.under_sampling import NearMiss
 from keras.models import Sequential
 from keras.layers import Dense
@@ -40,6 +41,23 @@ def neural_networks(df):
     model.add(Dense(1, activation='sigmoid'))
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     model.summary()
+
+    """model = KerasClassifier(build_fn=model, verbose=1)
+    param_grid = [{'batch_size': [50, 100]}, {'epochs': [4, 6, 8, 10]}]
+    # Build and fit the GridSearchCV
+    grid = GridSearchCV(estimator=model, param_grid=param_grid, cv=2, verbose=3, scoring='accuracy')
+
+    grid.fit(x_train, y_train)
+    # Summarize the results in a readable format
+    print("Best: {0}, using {1}".format(grid.best_score_, grid.best_params_))
+
+    means = grid.cv_results_['mean_test_score']
+    stds = grid.cv_results_['std_test_score']
+    params = grid.cv_results_['params']
+
+    for mean, stdev, param in zip(means, stds, params):
+        print('{0} ({1}) with: {2}'.format(mean, stdev, param))
+    """
     hist = model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=10, batch_size=100)
     sns.set()
     acc = hist.history['accuracy']

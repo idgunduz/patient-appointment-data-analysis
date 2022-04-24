@@ -9,7 +9,7 @@ from imblearn.over_sampling import SMOTE
 from collections import Counter
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.decomposition import PCA
 from sklearn import metrics
 
@@ -155,6 +155,14 @@ def main():
     pca.fit(all_sentence_embeddings)
     empty_description_idx = []
 
+    plt.figure(figsize=(10, 6))
+    result = pca.explained_variance_ratio_
+    plt.plot(np.cumsum(result))
+    plt.axhline(0.90, c="r")
+    plt.xlabel("Number of Components")
+    plt.ylabel("Cumulative Explained Variance")
+    plt.show()
+
     for idx_df, nhc_df in enumerate(df["NHC"]):
         for idx_scae, nhc_scae in enumerate(scae["NHC"]):
             if nhc_df == (nhc_scae.upper()):
@@ -189,29 +197,31 @@ def main():
     counter = Counter(y)
     print(counter)
 
-    x_train, x_test, y_train, y_test = train_test_split(x, y, stratify=y, test_size=0.2,
-                                                        random_state=0)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, stratify=y, test_size=0.2, random_state=0)
     print(f"x_test: {len(x_test)}")
     print(f"x_train: {len(x_train)}")
     print(f"y_test: {len(y_test)}")
     print(f"y_train: {len(y_train)}")
-    classifier = RandomForestClassifier(n_estimators=100)
-    classifier.fit(x_train.astype(int), y_train.astype(int))
+    classifier = RandomForestClassifier()
 
+    """n_estimators = [int(x) for x in np.linspace(start=32, stop=1024, num=100)]
+    random_grid = {'n_estimators': n_estimators}
+    weights = {0: 10.0, 1: 590.0}
+
+    rf = RandomForestClassifier(class_weight=weights)
+
+    rf_random = RandomizedSearchCV(estimator=rf, param_distributions=random_grid, n_iter=50, cv=3, verbose=2,
+                                   random_state=8, n_jobs=-1)
+
+    rf_random.fit(x, y)
+
+    best_params = rf_random.best_params_
+    print(best_params)"""
+    classifier.fit(x_train.astype(int), y_train.astype(int))
     y_pred = classifier.predict(x_test)
     print(metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
     print("Accuracy:", metrics.accuracy_score(y_test.astype(int), y_pred.astype(int)))
     print(confusion_matrix(y_test.astype(int), y_pred.astype(int)))
-
-    feature_importances_df = pd.DataFrame(
-        {"feature": list(x.columns), "importance": classifier.feature_importances_}).sort_values("importance",
-                                                                                                 ascending=False)
-    sns.barplot(x=feature_importances_df.feature, y=feature_importances_df.importance)
-    plt.xlabel("Feature Importance Score")
-    plt.ylabel("Features")
-    plt.title("Visualizing Important Features")
-    plt.xticks(rotation=45, horizontalalignment="right", fontweight="light", fontsize="large")
-    plt.show()
 
 
 if __name__ == "__main__":
