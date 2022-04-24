@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from collections import Counter
-from keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split, GridSearchCV, KFold
