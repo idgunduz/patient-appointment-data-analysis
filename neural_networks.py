@@ -7,7 +7,7 @@ import pandas as pd
 from collections import Counter
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split, GridSearchCV, KFold
+from sklearn.model_selection import train_test_split
 from imblearn.under_sampling import NearMiss
 from keras.models import Sequential
 from keras.layers import Dense

@@ -43,17 +43,16 @@ def random_forest(df):
     y_pred = classifier.predict(x_test.astype(int))
     print(metrics.classification_report(y_test.astype(int), y_pred.astype(int)))
     print("Accuracy:", metrics.accuracy_score(y_test.astype(int), y_pred.astype(int)))
-    TN, FN, FP, TP = confusion_matrix(y_test.astype(int), y_pred.astype(int),
-                                      labels=[1, 0]).reshape(-1)
     print(confusion_matrix(y_test.astype(int), y_pred.astype(int)))
-    specificity = TN / (TN + FP)
+    """specificity = TN / (TN + FP)
     sensitivity = TP / (TP + FN)
     print(f'Specificidad: {specificity}')
-    print(f'Sensibilidad: {sensitivity}')
+    print(f'Sensibilidad: {sensitivity}')"""
     feature_importances_df = pd.DataFrame({"feature": list(df.columns),
                                            "importance": classifier.feature_importances_})\
                                            .sort_values("importance", ascending=False)
 
+    plt.figure(figsize=(14, 6))
     sns.barplot(x=feature_importances_df.feature, y=feature_importances_df.importance)
     plt.xlabel("Features")
     plt.ylabel("Feature Importance Score")

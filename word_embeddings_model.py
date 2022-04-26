@@ -1,6 +1,5 @@
 import fasttext as ft
 import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 import re
@@ -9,7 +8,7 @@ from imblearn.over_sampling import SMOTE
 from collections import Counter
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import train_test_split, RandomizedSearchCV
+from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
 from sklearn import metrics
 

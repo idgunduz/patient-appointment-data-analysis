@@ -19,7 +19,7 @@ def without_hue(plot, feature):
 
 def main_exploratory(columns_count, df):
     for cc in columns_count:
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(14, 6))
         sns.countplot(x=cc, hue="TIPSAL", data=df).set(title=cc, ylabel='Total Pacientes')
         plt.show()
     """for cc in columns_count:
